@@ -13,12 +13,18 @@ $ cd thread_tests & make
 
 In this project, I implemented two different thread-safe versions (i.e. safe for concurrent access by different threads of a process) of the malloc() and free() functions. Both of the thread-safe malloc and free functions use the best fit allocation policy.
 
+
+I implemented a doubly linked freeList to maintain the free memory. The freeList contains a list of blocks(having the information of free memory that can be alloced for use) sorted by the pyisical address.
+
+
 - In version 1 of the thread-safe malloc/free functions, I used lock-based synchronization to prevent race conditions that would lead to incorrect results. These functions are to be named:
 ```sh
      //Thread Safe malloc/free: locking version
      void *ts_malloc_lock(size_t size);
      void ts_free_lock(void *ptr);
 ```
+To provide necessary synchronization for the locking version, I used support from the pthread library and used synchronization primitives (e.g. pthread_mutex_t, etc.).
+
 
 - In version 2 of the thread-safe malloc/free functions, I did not use locks, with one exception. Because the sbrk function is not thread-safe, I acquired a lock immediately before calling sbrk and release a lock immediately after calling sbrk. These functions are to be named:
 ```sh
@@ -26,7 +32,8 @@ In this project, I implemented two different thread-safe versions (i.e. safe for
      void *ts_malloc_nolock(size_t size);
      void ts_free_nolock(void *ptr);
 ```
-To provide necessary synchronization for the locking version, I used support from the pthread library and used synchronization primitives (e.g. pthread_mutex_t, etc.). Also, Thread-Local Storage is useful in this project.
+
+I kept a global startFree as the head of the freeList for Thread Local Storage. When you call ts_malloc_nolock(size_t size), I traverse the freeList for best fit free block. If the suitable block is found, either split it into two blocks and replace current block with new block in the freeList, or delete it from the freeList. I not found, sbrk() new space and no need to update freeList. When you call ts_free_nolock(void \*ptr), I insert current block into freeList and check if the nextFree or prevFree blocks are physically adjacent. If so, merge them.
 
 
 
