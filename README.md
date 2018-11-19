@@ -14,7 +14,7 @@ $ cd thread_tests & make
 In this project, I implemented two different thread-safe versions (i.e. safe for concurrent access by different threads of a process) of the malloc() and free() functions. Both of the thread-safe malloc and free functions use the best fit allocation policy.
 
 
-I implemented a doubly linked freeList to maintain the free memory. The freeList contains a list of blocks(having the information of free memory that can be alloced for use) sorted by the pyisical address.
+I implemented a doubly linked freeList to maintain the free memory. The freeList contains a list of blocks(having the information of freed memory that can be alloced for use) sorted by the pyisical address.
 
 
 - In version 1 of the thread-safe malloc/free functions, I used lock-based synchronization to prevent race conditions that would lead to incorrect results. These functions are to be named:
@@ -27,14 +27,14 @@ I keep a global startFree as the head of the freeListLock and it is not declared
 
 
 
-- In version 2 of the thread-safe malloc/free functions, I did not use locks, with one exception. Because the sbrk function is not thread-safe, I acquired a lock immediately before calling sbrk and release a lock immediately after calling sbrk. These functions are to be named:
+- In version 2 of the thread-safe malloc/free functions, I did not use locks, with one exception. Because the sbrk() function is not thread-safe, I acquired a lock immediately before calling sbrk and released a lock immediately after calling sbrk(). These functions are to be named:
 ```sh
      //Thread Safe malloc/free: non-locking version 
      void *ts_malloc_nolock(size_t size);
      void ts_free_nolock(void *ptr);
 ```
 
-I kept a global startFree as the head of the freeList for Thread Local Storage. When you call ts_malloc_nolock(size_t size), I traverse the freeList for best fit free block. If the suitable block is found, either split it into two blocks and replace current block with new block in the freeList, or delete it from the freeList. I not found, sbrk() new space and no need to update freeList. When you call ts_free_nolock(void \*ptr), I insert current block into freeList and check if the nextFree or prevFree blocks are physically adjacent. If so, merge them.
+I keep a global startFree as the head of the freeList for Thread Local Storage. When you call ts_malloc_nolock(size_t size), I traverse the freeList for best fit free block. If the suitable block is found, either split it into two blocks and replace current block with new block in the freeList, or delete it from the freeList. I not found, sbrk() new space and no need to update freeList. When you call ts_free_nolock(void \*ptr), I insert current block into freeList and check if the nextFree or prevFree blocks are physically adjacent. If so, merge them.
 
 
 This design is thread safe because I keep only an independent freeList and its head in each thread. MALLOC in thread #1 will either change its own freeList or globally sbrk() and leave its freeList unchanged. If thread #1 FREEs its own block, that’s fine, just add new blocks to its sorted freeList. If thread #1 FREEs blocks MALLOCed by thread #2, just add the block to freeList in thread #1 and nothing in thread #2 will be touched. Then both MALLOC and FREE can happen concurrently in multiple threads.
